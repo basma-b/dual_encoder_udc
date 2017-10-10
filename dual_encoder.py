@@ -8,7 +8,6 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 #from keras.utils import to_categorical
 import pickle
-np.random.seed(1337)
 from keras.models import Sequential
 from keras.models import load_model as K_load_model
 from keras.utils import np_utils
@@ -50,7 +49,6 @@ def recall(probas, k, group_size):
         indices = np.argpartition(batch, -k)[-k:]
         if 0 in indices:
             n_correct += 1
-    #print (n_correct , len(probas) / test_size, float( n_correct) / (len(probas) / test_size))
     return float(n_correct) / (len(probas) / test_size)
 
 
@@ -74,23 +72,22 @@ def main():
     parser.add_argument('--lr_decay', type=float, default=0.95, help='Learning rate decay')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer')
-    parser.add_argument('--max_seqlen', type=int, default=160, help='Max seqlen')
     parser.add_argument('--n_recurrent_layers', type=int, default=1, help='Num recurrent layers')
     parser.add_argument('--input_dir', type=str, default='./dataset/', help='Input dir')
     parser.add_argument('--save_model', type='bool', default=True, help='Whether to save the model')
     parser.add_argument('--model_fname', type=str, default='model/dual_encoder_lstm_classifier.h5', help='Model filename')
     parser.add_argument('--embedding_file', type=str, default='embeddings/glove.840B.300d.txt', help='Embedding filename')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--seed', type=int, default=1337, help='Random seed')
     args = parser.parse_args()
     print 'args:', args
     np.random.seed(args.seed)
     
-    EMBEDDING_DIM = args.emb_dim
-    LSTM_DIM = args.hidden_size
+    #EMBEDDING_DIM = args.emb_dim
+    #LSTM_DIM = args.hidden_size
 
-    OPTIMIZER = args.optimizer
-    BATCH_SIZE = args.batch_size
-    NB_EPOCH = args.epochs
+    #OPTIMIZER = args.optimizer
+    #BATCH_SIZE = args.batch_size
+    #NB_EPOCH = args.epochs
     
     if not os.path.exists(args.model_fname):
         print("No pre-trained model...")
@@ -116,6 +113,8 @@ def main():
         test_c, test_r, test_l = cPickle.load(open(args.input_dir + 'test.pkl', 'rb'))
         dev_c, dev_r, dev_l = cPickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
         
+        MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = cPickle.load(open(args.input_dir + 'params.pkl', 'rb'))
+        
         print('Found %s training texts.' % len(train_c)
         print('Found %s dev texts.' % len(dev_c)
         print('Found %s test texts.' % len(test_c)
@@ -123,7 +122,7 @@ def main():
         
         print("Now loading embedding matrix...")
         num_words = min(MAX_NB_WORDS, len(word_index)) + 1
-        embedding_matrix = np.zeros((num_words , EMBEDDING_DIM))
+        embedding_matrix = np.zeros((num_words , args.emb_dim))
         for word, i in word_index.items():
             if i >= MAX_NB_WORDS:
                 continue
@@ -135,23 +134,23 @@ def main():
         print("Now building dual encoder lstm model...")
         # define lstm for sentence1
         branch1 = Sequential()
-        branch1.add(Embedding(output_dim=EMBEDDING_DIM,
+        branch1.add(Embedding(output_dim=args.emb_dim,
                               input_dim=MAX_NB_WORDS,
                               input_length=MAX_SEQUENCE_LENGTH,
                               weights=[embedding_matrix],
                               mask_zero=True,
                               trainable=True))
-        branch1.add(LSTM(output_dim=LSTM_DIM))
+        branch1.add(LSTM(output_dim=args.hidden_size))
 
         # define lstm for sentence2
         branch2 = Sequential()
-        branch2.add(Embedding(output_dim=EMBEDDING_DIM,
+        branch2.add(Embedding(output_dim=args.emb_dim,
                               input_dim=MAX_NB_WORDS,
                               input_length=MAX_SEQUENCE_LENGTH,
                               weights=[embedding_matrix],
                               mask_zero=True,
                               trainable=True))
-        branch2.add(LSTM(output_dim=LSTM_DIM))
+        branch2.add(LSTM(output_dim=args.hidden_size))
 
         # define classifier model
         model = Sequential()
@@ -162,7 +161,7 @@ def main():
         model.add(Activation('sigmoid'))
 
         model.compile(loss='binary_crossentropy',
-                      optimizer=OPTIMIZER)
+                      optimizer=args.optimizer)
         
         print(model.summary())
         
@@ -172,11 +171,13 @@ def main():
         
         bestAcc = 0.0
         patience = 0 
-        print("\tbatch_size={}, nb_epoch={}".format(BATCH_SIZE, 1))
-        for ep in range(1,34):
+        
+        print("\tbatch_size={}, nb_epoch={}".format(args.batch_size, args.n_epochs))
+        
+        for ep in range(1, args.n_epochs):
             
             model.fit([train_c, train_r], train_l,
-                  batch_size=BATCH_SIZE, nb_epoch=1, callbacks=[histories],
+                  batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
                   validation_data=([dev_c, dev_r], dev_l), verbose=1)
 
             #model.save(model_name + "_ep." + str(ep) + ".h5")

@@ -1,9 +1,9 @@
-"""
-
-here we prepare the dataset in form of .pkl files
-
-"""
 # -*- encoding:utf-8 -*-
+
+"""
+here we prepare the dataset in form of .pkl files
+"""
+
 from __future__ import print_function
 
 import os
@@ -11,7 +11,6 @@ import sys
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-#from keras.utils import to_categorical
 import pickle
 np.random.seed(1337)
 import cPickle
