@@ -78,7 +78,8 @@ def main():
     parser.add_argument('--n_recurrent_layers', type=int, default=1, help='Num recurrent layers')
     parser.add_argument('--input_dir', type=str, default='./dataset/', help='Input dir')
     parser.add_argument('--save_model', type='bool', default=True, help='Whether to save the model')
-    parser.add_argument('--model_fname', type=str, default='dual_encoder_lstm_classifier.h5', help='Model filename')
+    parser.add_argument('--model_fname', type=str, default='model/dual_encoder_lstm_classifier.h5', help='Model filename')
+    parser.add_argument('--embedding_file', type=str, default='embeddings/glove.840B.300d.txt', help='Embedding filename')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     args = parser.parse_args()
     print 'args:', args
@@ -101,7 +102,7 @@ def main():
         print('Indexing word vectors.')
 
         embeddings_index = {}
-        f = open(os.path.join(GLOVE_DIR, 'glove.840B.300d.txt'))
+        f = open(args.embedding_file, 'r')
         for line in f:
             values = line.split()
             word = values[0]
