@@ -13,16 +13,15 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import pickle
 np.random.seed(1337)
-import cPickle
+#import cPickle
 
-BASE_DIR = ''
-GLOVE_DIR = BASE_DIR + '../'
+BASE_DIR = '../'
 TRAIN_POSITIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/positive/'
 TRAIN_NEGATIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/negative/'
 DEV_DATA_DIR = BASE_DIR + '../raw_data_context_response/dev/'
 TEST_DATA_DIR = BASE_DIR + '../raw_data_context_response/test/'
 
-def load_data():
+def main():
     #global MAX_SEQUENCE_LENGTH
     #global MAX_NB_WORDS
     #global word_index
@@ -170,10 +169,13 @@ def load_data():
     train_r = train_r[indices]
     train_l = train_l[indices]
     
-    cPickle.dump([train_c, train_r, train_l], open("dataset/train.pkl", "wb"), protocol=-1)
-    cPickle.dump([test_c, test_r, test_l], open("dataset/test.pkl", "wb"), protocol=-1)
-    cPickle.dump([dev_c, dev_r, dev_l], open("dataset/dev.pkl", "wb"), protocol=-1)
+    pickle.dump([train_c, train_r, train_l], open(BASE_DIR + "dataset/train.pkl", "wb"), protocol=-1)
+    pickle.dump([test_c, test_r, test_l], open(BASE_DIR + "dataset/test.pkl", "wb"), protocol=-1)
+    pickle.dump([dev_c, dev_r, dev_l], open(BASE_DIR + "dataset/dev.pkl", "wb"), protocol=-1)
     
-    cPickle.dump([MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index], open("dataset/params.pkl", "wb"), protocol=-1)
+    pickle.dump([MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index], open(BASE_DIR + "dataset/params.pkl", "wb"), protocol=-1)
     
     #return train_c, train_r, train_l, test_c, test_r, test_l, dev_c, dev_r, dev_l
+    
+if __name__ == '__main__':
+    main()

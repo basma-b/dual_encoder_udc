@@ -6,7 +6,6 @@ import sys
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-#from keras.utils import to_categorical
 import pickle
 from keras.models import Sequential
 from keras.models import load_model as K_load_model
@@ -15,19 +14,8 @@ from keras.layers import Dense, Input, Flatten, Dropout, LSTM, Merge, Activation
 from keras.layers import Conv1D, MaxPooling1D, Embedding
 from keras.models import Model
 from utilities import cnn_callbacks
-import cpickle
-
-
-#BASE_DIR = ''
-#GLOVE_DIR = BASE_DIR + '../'
-#TRAIN_POSITIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/positive/'
-#TRAIN_NEGATIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/negative/'
-#DEV_DATA_DIR = BASE_DIR + '../raw_data_context_response/dev/'
-#TEST_DATA_DIR = BASE_DIR + '../raw_data_context_response/test/'
-#MAX_SEQUENCE_LENGTH = 1000
-#MAX_NB_WORDS = 20000
-#EMBEDDING_DIM = 300
-#word_index = 0
+import argparse
+import cPickle
 
 def compute_recall_ks(probas):
     recall_k = {}
@@ -51,25 +39,16 @@ def recall(probas, k, group_size):
             n_correct += 1
     return float(n_correct) / (len(probas) / test_size)
 
-
-#EMBEDDING_DIM = 300
-#LSTM_DIM = 128
-
-#OPTIMIZER = 'adam'
-#BATCH_SIZE = 128
-#NB_EPOCH = 50
-
-#TRAINED_CLASSIFIER_PATH = "dual_encoder_lstm_classifier.h5"
-
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
 def main():
     
     parser = argparse.ArgumentParser()
     parser.register('type','bool',str2bool)
     parser.add_argument('--emb_dim', type=str, default=300, help='Embeddings dimension')
-    parser.add_argument('--hidden_size', type=int, default=128, help='Hidden size')
+    parser.add_argument('--hidden_size', type=int, default=300, help='Hidden size')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--n_epochs', type=int, default=50, help='Num epochs')
-    parser.add_argument('--lr_decay', type=float, default=0.95, help='Learning rate decay')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer')
     parser.add_argument('--n_recurrent_layers', type=int, default=1, help='Num recurrent layers')
@@ -79,15 +58,9 @@ def main():
     parser.add_argument('--embedding_file', type=str, default='embeddings/glove.840B.300d.txt', help='Embedding filename')
     parser.add_argument('--seed', type=int, default=1337, help='Random seed')
     args = parser.parse_args()
-    print 'args:', args
+    print ('Model args: ', args)
     np.random.seed(args.seed)
     
-    #EMBEDDING_DIM = args.emb_dim
-    #LSTM_DIM = args.hidden_size
-
-    #OPTIMIZER = args.optimizer
-    #BATCH_SIZE = args.batch_size
-    #NB_EPOCH = args.epochs
     
     if not os.path.exists(args.model_fname):
         print("No pre-trained model...")
@@ -113,11 +86,16 @@ def main():
         test_c, test_r, test_l = cPickle.load(open(args.input_dir + 'test.pkl', 'rb'))
         dev_c, dev_r, dev_l = cPickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
         
+        print('Found %s training texts.' % len(train_c))
+        print('Found %s dev texts.' % len(dev_c))
+        print('Found %s test texts.' % len(test_c))
+        
         MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = cPickle.load(open(args.input_dir + 'params.pkl', 'rb'))
         
-        print('Found %s training texts.' % len(train_c)
-        print('Found %s dev texts.' % len(dev_c)
-        print('Found %s test texts.' % len(test_c)
+        print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
+        print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
+        
+        
         
         
         print("Now loading embedding matrix...")
@@ -215,5 +193,5 @@ def main():
     return model
 
 if __name__ == "__main__":
-    model = load_model()
+    main()
     

@@ -15,14 +15,7 @@ class Histories(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         self.losses.append(logs.get('loss'))
-        print (self.model.validation_data[0])
-        print (self.model.validation_data[1])
-        print (self.model.validation_data[2])
-        print (self.model.validation_data[3])
-        print (len(self.model.validation_data))
-        #print self.model.validation_data.shape
-        y_pred = self.model.predict((self.model.validation_data[0], self.model.validation_data[1]))
-        #print y_pred
+        y_pred = self.model.predict(([self.model.validation_data[0], self.model.validation_data[1]]))
         print (y_pred)
         recall_k = self.compute_recall_ks(y_pred[:,0])
         
@@ -53,8 +46,6 @@ class Histories(keras.callbacks.Callback):
         n_correct = 0
         for i in xrange(n_batches):
             batch = np.array(probas[i*test_size:(i+1)*test_size])[:group_size]
-            #p = np.random.permutation(len(batch))
-            #indices = p[np.argpartition(batch[p], -k)[-k:]]
             indices = np.argpartition(batch, -k)[-k:]
             if 0 in indices:
                 n_correct += 1
