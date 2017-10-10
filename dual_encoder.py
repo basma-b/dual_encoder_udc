@@ -11,11 +11,11 @@ from keras.models import Sequential
 from keras.models import load_model as K_load_model
 from keras.utils import np_utils
 from keras.layers import Dense, Input, Flatten, Dropout, LSTM, Merge, Activation
-from keras.layers import Conv1D, MaxPooling1D, Embedding
+from keras.layers import Conv1D, MaxPooling1D, Embedding, merge
 from keras.models import Model
-from utilities import cnn_callbacks
+from utilities import my_callbacks
 import argparse
-import cPickle
+#import cPickle
 
 def compute_recall_ks(probas):
     recall_k = {}
@@ -68,7 +68,7 @@ def main():
         
         # first, build index mapping words in the embeddings set
         # to their embedding vector
-
+        
         print('Indexing word vectors.')
 
         embeddings_index = {}
@@ -76,25 +76,29 @@ def main():
         for line in f:
             values = line.split()
             word = values[0]
-            coefs = np.asarray(values[1:], dtype='float32')
+            #coefs = np.asarray(values[1:], dtype='float32')
+            
+            try:
+                coefs = np.asarray(values[1:], dtype='float32')
+            except ValueError:
+                continue
             embeddings_index[word] = coefs
         f.close()
 
         print("Now loading UDC data...")
         
-        train_c, train_r, train_l = cPickle.load(open(args.input_dir + 'train.pkl', 'rb'))
-        test_c, test_r, test_l = cPickle.load(open(args.input_dir + 'test.pkl', 'rb'))
-        dev_c, dev_r, dev_l = cPickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
+        train_c, train_r, train_l = pickle.load(open(args.input_dir + 'train.pkl', 'rb'))
+        test_c, test_r, test_l = pickle.load(open(args.input_dir + 'test.pkl', 'rb'))
+        dev_c, dev_r, dev_l = pickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
         
         print('Found %s training texts.' % len(train_c))
         print('Found %s dev texts.' % len(dev_c))
         print('Found %s test texts.' % len(test_c))
         
-        MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = cPickle.load(open(args.input_dir + 'params.pkl', 'rb'))
+        MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = pickle.load(open(args.input_dir + 'params.pkl', 'rb'))
         
         print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
         print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
-        
         
         
         
@@ -118,7 +122,8 @@ def main():
                               weights=[embedding_matrix],
                               mask_zero=True,
                               trainable=True))
-        branch1.add(LSTM(output_dim=args.hidden_size))
+        #branch1.add(LSTM(output_dim=args.hidden_size))
+        branch1.add(LSTM(units=args.hidden_size))
 
         # define lstm for sentence2
         branch2 = Sequential()
@@ -128,12 +133,14 @@ def main():
                               weights=[embedding_matrix],
                               mask_zero=True,
                               trainable=True))
-        branch2.add(LSTM(output_dim=args.hidden_size))
+        #branch2.add(LSTM(output_dim=args.hidden_size))
+        branch2.add(LSTM(units=args.hidden_size))
 
         # define classifier model
         model = Sequential()
         # Merge layer holds a weight matrix of itself
         model.add(Merge([branch1, branch2], mode='mul'))
+        #model.add(merge([branch1, branch2], mode='mul'))
         model.add(Dense(1))
         #model.add(Dropout(0.5))
         model.add(Activation('sigmoid'))
@@ -145,7 +152,7 @@ def main():
         
         print("Now training the model...")
         
-        histories = cnn_callbacks.Histories()
+        histories = my_callbacks.Histories()
         
         bestAcc = 0.0
         patience = 0 
@@ -154,8 +161,12 @@ def main():
         
         for ep in range(1, args.n_epochs):
             
+            #model.fit([train_c, train_r], train_l,
+                  #batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
+                  #validation_data=([dev_c, dev_r], dev_l), verbose=1)
+                  
             model.fit([train_c, train_r], train_l,
-                  batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
+                  batch_size=args.batch_size, epochs=1, callbacks=[histories],
                   validation_data=([dev_c, dev_r], dev_l), verbose=1)
 
             #model.save(model_name + "_ep." + str(ep) + ".h5")
@@ -171,8 +182,6 @@ def main():
             y_pred = model.predict([test_c, test_r])        
             
             print("Perform on test set after Epoch: " + str(ep) + "...!")    
-            #print (y_pred)
-            #print (y_pred[:,1], len(y_pred[:,1]))
             recall_k = compute_recall_ks(y_pred[:,0])
             
             #stop the model whch patience = 8

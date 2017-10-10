@@ -170,7 +170,7 @@ def main():
     train_l = train_l[indices]
     
     pickle.dump([train_c, train_r, train_l], open(BASE_DIR + "dataset/train.pkl", "wb"), protocol=-1)
-    pickle.dump([test_c, test_r, test_l], open(BASE_DIR + "dataset/test.pkl", "wb"), protocol=-1)
+    ickle.dump([test_c, test_r, test_l], open(BASE_DIR + "dataset/test.pkl", "wb"), protocol=-1)
     pickle.dump([dev_c, dev_r, dev_l], open(BASE_DIR + "dataset/dev.pkl", "wb"), protocol=-1)
     
     pickle.dump([MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index], open(BASE_DIR + "dataset/params.pkl", "wb"), protocol=-1)
