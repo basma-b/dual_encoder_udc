@@ -6,6 +6,7 @@ In this repository I implemented the dual encoder used in this paper https://arx
 I think that both implementations are hard to understand and to re-use (my point of view) so I decided to implement a simple code using Keras.
 
 ## Requires:
+* Python 2.7
 * Theano
 * Keras
 
