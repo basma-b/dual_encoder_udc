@@ -10,6 +10,20 @@ I think that both implementations are hard to understand and to re-use (my point
 * Theano
 * Keras
 
+## Before running the model:
+* Creat three folders in the local directory (dual_encoder_udc): dataset, model and embeddings.
+* Download Glove Embeddings into embeddings directory 
+  ```
+  cd embeddings
+  wget http://nlp.stanford.edu/data/glove.840B.300d.zip
+  unzip glove.840B.300d.zip
+  ```
+* Download the dataset in format .pkl into dataset folder
+  ```
+  cd dataset
+  wget 
+  ```
+
 ## Running the model:
 ```
 python dual_encoder.py
