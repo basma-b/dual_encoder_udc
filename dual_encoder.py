@@ -16,19 +16,19 @@ from keras.layers import Dense, Input, Flatten, Dropout, LSTM, Merge, Activation
 from keras.layers import Conv1D, MaxPooling1D, Embedding
 from keras.models import Model
 from utilities import cnn_callbacks
+import cpickle
 
 
-
-BASE_DIR = ''
-GLOVE_DIR = BASE_DIR + '../'
-TRAIN_POSITIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/positive/'
-TRAIN_NEGATIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/negative/'
-DEV_DATA_DIR = BASE_DIR + '../raw_data_context_response/dev/'
-TEST_DATA_DIR = BASE_DIR + '../raw_data_context_response/test/'
-MAX_SEQUENCE_LENGTH = 1000
-MAX_NB_WORDS = 20000
-EMBEDDING_DIM = 300
-word_index = 0
+#BASE_DIR = ''
+#GLOVE_DIR = BASE_DIR + '../'
+#TRAIN_POSITIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/positive/'
+#TRAIN_NEGATIVE_DATA_DIR = BASE_DIR + '../raw_data_context_response/train/negative/'
+#DEV_DATA_DIR = BASE_DIR + '../raw_data_context_response/dev/'
+#TEST_DATA_DIR = BASE_DIR + '../raw_data_context_response/test/'
+#MAX_SEQUENCE_LENGTH = 1000
+#MAX_NB_WORDS = 20000
+#EMBEDDING_DIM = 300
+#word_index = 0
 
 def compute_recall_ks(probas):
     recall_k = {}
@@ -54,20 +54,44 @@ def recall(probas, k, group_size):
     return float(n_correct) / (len(probas) / test_size)
 
 
-EMBEDDING_DIM = 300
-LSTM_DIM = 128
-#MAX_SEQUENCE_LENGTH = 78
-#MAX_NB_WORDS = 34873
+#EMBEDDING_DIM = 300
+#LSTM_DIM = 128
 
-OPTIMIZER = 'adam'
-BATCH_SIZE = 128
-NB_EPOCH = 20
+#OPTIMIZER = 'adam'
+#BATCH_SIZE = 128
+#NB_EPOCH = 50
 
-TRAINED_CLASSIFIER_PATH = "dual_encoder_lstm_classifier.h5"
-GLOVE_INDEX_PICKLE = "glove_index.pickle"
+#TRAINED_CLASSIFIER_PATH = "dual_encoder_lstm_classifier.h5"
 
-def load_model():
-    if not os.path.exists(TRAINED_CLASSIFIER_PATH):
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.register('type','bool',str2bool)
+    parser.add_argument('--emb_dim', type=str, default=300, help='Embeddings dimension')
+    parser.add_argument('--hidden_size', type=int, default=128, help='Hidden size')
+    parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
+    parser.add_argument('--n_epochs', type=int, default=50, help='Num epochs')
+    parser.add_argument('--lr_decay', type=float, default=0.95, help='Learning rate decay')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer')
+    parser.add_argument('--max_seqlen', type=int, default=160, help='Max seqlen')
+    parser.add_argument('--n_recurrent_layers', type=int, default=1, help='Num recurrent layers')
+    parser.add_argument('--input_dir', type=str, default='./dataset/', help='Input dir')
+    parser.add_argument('--save_model', type='bool', default=True, help='Whether to save the model')
+    parser.add_argument('--model_fname', type=str, default='dual_encoder_lstm_classifier.h5', help='Model filename')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    args = parser.parse_args()
+    print 'args:', args
+    np.random.seed(args.seed)
+    
+    EMBEDDING_DIM = args.emb_dim
+    LSTM_DIM = args.hidden_size
+
+    OPTIMIZER = args.optimizer
+    BATCH_SIZE = args.batch_size
+    NB_EPOCH = args.epochs
+    
+    if not os.path.exists(args.model_fname):
         print("No pre-trained model...")
         print("Start building model...")
         
@@ -86,11 +110,14 @@ def load_model():
         f.close()
 
         print("Now loading UDC data...")
-        train_c, train_r, train_l, test_c, test_r, test_l, dev_c, dev_r, dev_l = load_data()
         
-        print('Found %s training texts.' % len(train_c), len(train_r),len(train_l))
-        print('Found %s dev texts.' % len(dev_c), len(dev_r), len(dev_l))
-        print('Found %s test texts.' % len(test_c), len(test_r), len(test_l))
+        train_c, train_r, train_l = cPickle.load(open(args.input_dir + 'train.pkl', 'rb'))
+        test_c, test_r, test_l = cPickle.load(open(args.input_dir + 'test.pkl', 'rb'))
+        dev_c, dev_r, dev_l = cPickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
+        
+        print('Found %s training texts.' % len(train_c)
+        print('Found %s dev texts.' % len(dev_c)
+        print('Found %s test texts.' % len(test_c)
         
         
         print("Now loading embedding matrix...")
@@ -175,13 +202,13 @@ def load_model():
         
         
         
-
-        #print("Now saving the model... at {}".format(TRAINED_CLASSIFIER_PATH))
-        #model.save(TRAINED_CLASSIFIER_PATH)
+        if args.save_model:
+            print("Now saving the model... at {}".format(args.model_fname))
+            model.save(args.model_fname)
 
     else:
         print("Found pre-trained model...")
-        model = K_load_model(TRAINED_CLASSIFIER_PATH)
+        model = K_load_model(args.model_fname)
 
     return model
 
