@@ -32,7 +32,7 @@ def recall(probas, k, group_size):
     test_size = 10
     n_batches = len(probas) // test_size
     n_correct = 0
-    for i in xrange(n_batches):
+    for i in range(n_batches):
         batch = np.array(probas[i*test_size:(i+1)*test_size])[:group_size]
         indices = np.argpartition(batch, -k)[-k:]
         if 0 in indices:
@@ -91,16 +91,14 @@ def main():
         test_c, test_r, test_l = pickle.load(open(args.input_dir + 'test.pkl', 'rb'))
         dev_c, dev_r, dev_l = pickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
         
-        print('Found %s training texts.' % len(train_c))
-        print('Found %s dev texts.' % len(dev_c))
-        print('Found %s test texts.' % len(test_c))
+        print('Found %s training samples.' % len(train_c))
+        print('Found %s dev samples.' % len(dev_c))
+        print('Found %s test samples.' % len(test_c))
         
         MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = pickle.load(open(args.input_dir + 'params.pkl', 'rb'))
         
         print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
         print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
-        
-        
         
         print("Now loading embedding matrix...")
         num_words = min(MAX_NB_WORDS, len(word_index)) + 1
@@ -165,9 +163,9 @@ def main():
                   #batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
                   #validation_data=([dev_c, dev_r], dev_l), verbose=1)
                   
-            model.fit([train_c, train_r], train_l,
+            model.fit([train_c[:5000], train_r[:5000]], train_l[:5000],
                   batch_size=args.batch_size, epochs=1, callbacks=[histories],
-                  validation_data=([dev_c, dev_r], dev_l), verbose=1)
+                  validation_data=([dev_c[:500], dev_r[:500]], dev_l[:500]), verbose=1)
 
             #model.save(model_name + "_ep." + str(ep) + ".h5")
 
@@ -179,7 +177,7 @@ def main():
                 patience = patience + 1
 
             #doing classify the test set
-            y_pred = model.predict([test_c, test_r])        
+            y_pred = model.predict([test_c[:500], test_r[:500]])        
             
             print("Perform on test set after Epoch: " + str(ep) + "...!")    
             recall_k = compute_recall_ks(y_pred[:,0])
