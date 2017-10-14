@@ -15,39 +15,16 @@ from keras.layers import Conv1D, MaxPooling1D, Embedding, merge
 from keras.models import Model
 from utilities import my_callbacks
 import argparse
+from data_helper import compute_recall_ks, str2bool
 #import cPickle
 
-def compute_recall_ks(probas):
-    recall_k = {}
-    for group_size in [2, 5, 10]:
-        recall_k[group_size] = {}
-        print ('group_size: %d' % group_size)
-        for k in [1, 2, 5]:
-            if k < group_size:
-                recall_k[group_size][k] = recall(probas, k, group_size)
-                print ('recall@%d' % k, recall_k[group_size][k])
-    return recall_k
-
-def recall(probas, k, group_size):
-    test_size = 10
-    n_batches = len(probas) // test_size
-    n_correct = 0
-    for i in range(n_batches):
-        batch = np.array(probas[i*test_size:(i+1)*test_size])[:group_size]
-        indices = np.argpartition(batch, -k)[-k:]
-        if 0 in indices:
-            n_correct += 1
-    return float(n_correct) / (len(probas) / test_size)
-
-def str2bool(v):
-    return v.lower() in ("yes", "true", "t", "1")
 def main():
     
     parser = argparse.ArgumentParser()
     parser.register('type','bool',str2bool)
     parser.add_argument('--emb_dim', type=str, default=300, help='Embeddings dimension')
     parser.add_argument('--hidden_size', type=int, default=300, help='Hidden size')
-    parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=256, help='Batch size')
     parser.add_argument('--n_epochs', type=int, default=50, help='Num epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer')
@@ -62,142 +39,132 @@ def main():
     np.random.seed(args.seed)
     
     
-    if not os.path.exists(args.model_fname):
-        print("No pre-trained model...")
-        print("Start building model...")
-        
-        # first, build index mapping words in the embeddings set
-        # to their embedding vector
-        
-        print('Indexing word vectors.')
+    print("No pre-trained model...")
+    print("Start building model...")
+    
+    # first, build index mapping words in the embeddings set
+    # to their embedding vector
+    
+    print('Indexing word vectors.')
 
-        embeddings_index = {}
-        f = open(args.embedding_file, 'r')
-        for line in f:
-            values = line.split()
-            word = values[0]
-            #coefs = np.asarray(values[1:], dtype='float32')
-            
-            try:
-                coefs = np.asarray(values[1:], dtype='float32')
-            except ValueError:
-                continue
-            embeddings_index[word] = coefs
-        f.close()
+    embeddings_index = {}
+    f = open(args.embedding_file, 'r')
+    for line in f:
+        values = line.split()
+        word = values[0]
+        #coefs = np.asarray(values[1:], dtype='float32')
+        
+        try:
+            coefs = np.asarray(values[1:], dtype='float32')
+        except ValueError:
+            continue
+        embeddings_index[word] = coefs
+    f.close()
 
-        print("Now loading UDC data...")
-        
-        train_c, train_r, train_l = pickle.load(open(args.input_dir + 'train.pkl', 'rb'))
-        test_c, test_r, test_l = pickle.load(open(args.input_dir + 'test.pkl', 'rb'))
-        dev_c, dev_r, dev_l = pickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
-        
-        print('Found %s training samples.' % len(train_c))
-        print('Found %s dev samples.' % len(dev_c))
-        print('Found %s test samples.' % len(test_c))
-        
-        MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = pickle.load(open(args.input_dir + 'params.pkl', 'rb'))
-        
-        print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
-        print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
-        
-        print("Now loading embedding matrix...")
-        num_words = min(MAX_NB_WORDS, len(word_index)) + 1
-        embedding_matrix = np.zeros((num_words , args.emb_dim))
-        for word, i in word_index.items():
-            if i >= MAX_NB_WORDS:
-                continue
-            embedding_vector = embeddings_index.get(word)
-            if embedding_vector is not None:
-                # words not found in embedding index will be all-zeros.
-                embedding_matrix[i] = embedding_vector
+    print("Now loading UDC data...")
+    
+    train_c, train_r, train_l = pickle.load(open(args.input_dir + 'train.pkl', 'rb'))
+    test_c, test_r, test_l = pickle.load(open(args.input_dir + 'test.pkl', 'rb'))
+    dev_c, dev_r, dev_l = pickle.load(open(args.input_dir + 'dev.pkl', 'rb'))
+    
+    print('Found %s training samples.' % len(train_c))
+    print('Found %s dev samples.' % len(dev_c))
+    print('Found %s test samples.' % len(test_c))
+    
+    MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = pickle.load(open(args.input_dir + 'params.pkl', 'rb'))
+    MAX_SEQUENCE_LENGTH = 160
+    print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
+    print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
+    
+    
+    
+    print("Now loading embedding matrix...")
+    num_words = min(MAX_NB_WORDS, len(word_index)) + 1
+    embedding_matrix = np.zeros((num_words , args.emb_dim))
+    for word, i in word_index.items():
+        if i >= MAX_NB_WORDS:
+            continue
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
 
-        print("Now building dual encoder lstm model...")
-        # define lstm for sentence1
-        branch1 = Sequential()
-        branch1.add(Embedding(output_dim=args.emb_dim,
-                              input_dim=MAX_NB_WORDS,
-                              input_length=MAX_SEQUENCE_LENGTH,
-                              weights=[embedding_matrix],
-                              mask_zero=True,
-                              trainable=True))
-        #branch1.add(LSTM(output_dim=args.hidden_size))
-        branch1.add(LSTM(units=args.hidden_size))
+    print("Now building dual encoder lstm model...")
+    # define lstm for sentence1
+    m_model = Sequential()
+    m_model.add(Embedding(output_dim=args.emb_dim,
+                            input_dim=MAX_NB_WORDS,
+                            input_length=MAX_SEQUENCE_LENGTH,
+                            weights=[embedding_matrix],
+                            mask_zero=True,
+                            trainable=True))
+    
+    m_model.add(LSTM(units=args.hidden_size))
+    
+    context_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+    response_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
 
-        # define lstm for sentence2
-        branch2 = Sequential()
-        branch2.add(Embedding(output_dim=args.emb_dim,
-                              input_dim=MAX_NB_WORDS,
-                              input_length=MAX_SEQUENCE_LENGTH,
-                              weights=[embedding_matrix],
-                              mask_zero=True,
-                              trainable=True))
-        #branch2.add(LSTM(output_dim=args.hidden_size))
-        branch2.add(LSTM(units=args.hidden_size))
+    # these two models will share eveything from shared_cnn
+    context_branch = m_model(context_input)
+    response_branch = m_model(response_input)
+    
+    concatenated = merge([context_branch, response_branch], mode='mul')
+    out = Dense((1), activation = "sigmoid") (concatenated)
 
-        # define classifier model
-        model = Sequential()
-        # Merge layer holds a weight matrix of itself
-        model.add(Merge([branch1, branch2], mode='mul'))
-        #model.add(merge([branch1, branch2], mode='mul'))
-        model.add(Dense(1))
-        #model.add(Dropout(0.5))
-        model.add(Activation('sigmoid'))
+    model = Model([context_input, response_input], out)
+    model.compile(loss='binary_crossentropy',
+                    optimizer=args.optimizer)
+    
+    print(m_model.summary())
+    print(model.summary())
+    
+    print("Now training the model...")
+    
+    histories = my_callbacks.Histories()
+    
+    bestAcc = 0.0
+    patience = 0 
+    
+    print("\tbatch_size={}, nb_epoch={}".format(args.batch_size, args.n_epochs))
+    
+    for ep in range(1, args.n_epochs):
+        
+        #model.fit([train_c, train_r], train_l,
+                #batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
+                #validation_data=([dev_c, dev_r], dev_l), verbose=1)
+                
+        model.fit([train_c, train_r], train_l,
+                batch_size=args.batch_size, epochs=1, callbacks=[histories],
+                validation_data=([dev_c, dev_r], dev_l), verbose=1)
+        
+        #model.fit([train_c[:100], train_r[:100]], train_l[:100],
+                #batch_size=args.batch_size, epochs=1, callbacks=[histories],
+                #validation_data=([dev_c[:100], dev_r[:100]], dev_l[:100]), verbose=1)
 
-        model.compile(loss='binary_crossentropy',
-                      optimizer=args.optimizer)
-        
-        print(model.summary())
-        
-        print("Now training the model...")
-        
-        histories = my_callbacks.Histories()
-        
-        bestAcc = 0.0
-        patience = 0 
-        
-        print("\tbatch_size={}, nb_epoch={}".format(args.batch_size, args.n_epochs))
-        
-        for ep in range(1, args.n_epochs):
-            
-            #model.fit([train_c, train_r], train_l,
-                  #batch_size=args.batch_size, nb_epoch=1, callbacks=[histories],
-                  #validation_data=([dev_c, dev_r], dev_l), verbose=1)
-                  
-            model.fit([train_c[:5000], train_r[:5000]], train_l[:5000],
-                  batch_size=args.batch_size, epochs=1, callbacks=[histories],
-                  validation_data=([dev_c[:500], dev_r[:500]], dev_l[:500]), verbose=1)
+        #model.save(model_name + "_ep." + str(ep) + ".h5")
 
-            #model.save(model_name + "_ep." + str(ep) + ".h5")
+        curAcc =  histories.accs[0]
+        if curAcc >= bestAcc:
+            bestAcc = curAcc
+            patience = 0
+        else:
+            patience = patience + 1
 
-            curAcc =  histories.accs[0]
-            if curAcc >= bestAcc:
-                bestAcc = curAcc
-                patience = 0
-            else:
-                patience = patience + 1
-
-            #doing classify the test set
-            y_pred = model.predict([test_c[:500], test_r[:500]])        
-            
-            print("Perform on test set after Epoch: " + str(ep) + "...!")    
-            recall_k = compute_recall_ks(y_pred[:,0])
-            
-            #stop the model whch patience = 8
-            if patience > 10:
-                print("Early stopping at epoch: "+ str(ep))
-                break
+        #doing classify the test set
+        y_pred = model.predict([test_c, test_r])        
+        #y_pred = model.predict([test_c[:100], test_r[:100]])     
         
+        print("Perform on test set after Epoch: " + str(ep) + "...!")    
+        recall_k = compute_recall_ks(y_pred[:,0])
         
+        #stop the model whch patience = 10
+        if patience > 10:
+            print("Early stopping at epoch: "+ str(ep))
+            break
         
-        if args.save_model:
-            print("Now saving the model... at {}".format(args.model_fname))
-            model.save(args.model_fname)
-
-    else:
-        print("Found pre-trained model...")
-        model = K_load_model(args.model_fname)
-
-    return model
+    if args.save_model:
+        print("Now saving the model... at {}".format(args.model_fname))
+        model.save(args.model_fname)
 
 if __name__ == "__main__":
     main()
