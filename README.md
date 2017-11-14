@@ -1,5 +1,5 @@
 # dual_encoder_udc
-An implementation of dual encoder using Keras
+An implementation of dual encoder using Keras (more details are on my blog post https://basmaboussaha.wordpress.com/2017/10/18/implementation-of-dual-encoder-using-keras/).
 
 In this repository I implemented the dual encoder used in this paper https://arxiv.org/pdf/1506.08909.pdf using Keras. The motivation of this work is that the available implementations of this work are in Theano https://github.com/npow/ubottu and Tensorflow https://github.com/dennybritz/chatbot-retrieval/ 
 
