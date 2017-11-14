@@ -28,7 +28,7 @@ I think that both implementations are hard to understand and to re-use (my point
 ```
 python3.5 dual_encoder.py
 ```
-## Results
+## Results:
 Running The above python script should give you the results below. Note that the best results are obtained after epoch 2, using the default hyperparameters: --emb_dim=300, --hidden_size=300, --batch_size=256. Note that embeddings are intilized with glove and are fine tuned during training.
 
 ```
