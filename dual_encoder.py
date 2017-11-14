@@ -15,7 +15,7 @@ from keras.layers import Conv1D, MaxPooling1D, Embedding, merge
 from keras.models import Model
 from utilities import my_callbacks
 import argparse
-from data_helper import compute_recall_ks, str2bool
+from utilities.data_helper import compute_recall_ks, str2bool
 #import cPickle
 
 def main():
