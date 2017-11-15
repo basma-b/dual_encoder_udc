@@ -18,7 +18,12 @@ I think that both implementations are hard to understand and to re-use (my point
   wget http://nlp.stanford.edu/data/glove.840B.300d.zip
   unzip glove.840B.300d.zip
   ```
-* Download the dataset in format .pkl into dataset folder: This pkl files were generated using the utilities/prepare_dataset.py script which separate the context and response from each of the train.csv, test.csv and dev.csv taht you can download from here https://github.com/rkadlec/ubuntu-ranking-dataset-creator by running ./generate.sh without any options. In case you need this raw data, just email me I can provide them upon request.
+* Download the dataset in format .pkl into dataset folder: This pkl files were generated using the utilities/prepare_dataset.py script which separate the context and response from each of the train.csv, test.csv and dev.csv taht you can download from here https://github.com/rkadlec/ubuntu-ranking-dataset-creator by running ./generate.sh without any options.
+```
+cd utilities
+python prepare_dataset_from_csv.py
+```
+In case you need this raw data, just email me I can provide them upon request.
 
   ```
   https://drive.google.com/file/d/1VjVzY0MqKj0b-q_KXnaHC49qCw3iDqEY/view?usp=sharing
