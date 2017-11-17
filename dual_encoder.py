@@ -2,8 +2,6 @@
 from __future__ import print_function
 
 import numpy as np
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
 import pickle
 from keras.models import Sequential
 from keras.utils import np_utils
@@ -33,23 +31,19 @@ def main():
     args = parser.parse_args()
     print ('Model args: ', args)
     np.random.seed(args.seed)
-    
-    
-    print("No pre-trained model...")
-    print("Start building model...")
+ 
+    print("Starting...")
     
     # first, build index mapping words in the embeddings set
     # to their embedding vector
     
-    print('Indexing word vectors.')
+    print('Now indexing word vectors...')
 
     embeddings_index = {}
     f = open(args.embedding_file, 'r')
     for line in f:
         values = line.split()
         word = values[0]
-        #coefs = np.asarray(values[1:], dtype='float32')
-        
         try:
             coefs = np.asarray(values[1:], dtype='float32')
         except ValueError:
@@ -58,7 +52,7 @@ def main():
     f.close()
     
     MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index = pickle.load(open(args.input_dir + 'params.pkl', 'rb'))
-    MAX_SEQUENCE_LENGTH = 160
+
     print("MAX_SEQUENCE_LENGTH: {}".format(MAX_SEQUENCE_LENGTH))
     print("MAX_NB_WORDS: {}".format(MAX_NB_WORDS))
     
