@@ -6,15 +6,12 @@ here we prepare the dataset in form of .pkl files
 
 from __future__ import print_function
 
-import os
-import sys
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import pickle
 import pandas as pd
 np.random.seed(1337)
-#import cPickle
 
 DATA_DIR = '../dataset/'
 
@@ -42,7 +39,7 @@ def build_prediction_set(csv_file):
             context.append(df.loc[i].Context)
         # add ground truth
         response.append(df.loc[i]['Ground Truth Utterance'])
-        # add 9 fakse responses
+        # add 9 false responses
         response.append(df.loc[i].Distractor_0)
         response.append(df.loc[i].Distractor_1)
         response.append(df.loc[i].Distractor_2)
@@ -66,12 +63,9 @@ def build_prediction_set(csv_file):
     return context, response, label
 
 def main():
-    #global MAX_SEQUENCE_LENGTH
-    #global MAX_NB_WORDS
-    #global word_index
+
     # loading train data
     train_c, train_r, train_l = build_train_set()   
-    #print(len(train_c))
     # loading test data
     test_c, test_r, test_l = build_prediction_set('test.csv')
     # loading dev data
@@ -92,10 +86,10 @@ def main():
     dev_c = tokenizer.texts_to_sequences(dev_c)
     dev_r = tokenizer.texts_to_sequences(dev_r)
 
-    MAX_SEQUENCE_LENGTH = max([len(seq) for seq in train_c + train_r
-                                                    + test_c + test_r
-                                                    + dev_c + dev_r])
-    print(MAX_SEQUENCE_LENGTH)
+    #MAX_SEQUENCE_LENGTH = max([len(seq) for seq in train_c + train_r
+                                                    #+ test_c + test_r
+                                                    #+ dev_c + dev_r])
+    
     MAX_NB_WORDS = len(tokenizer.word_index) + 1
     word_index = tokenizer.word_index
     MAX_SEQUENCE_LENGTH = 160
@@ -122,13 +116,11 @@ def main():
     train_r = train_r[indices]
     train_l = train_l[indices]
 
-    pickle.dump([train_c, train_r, train_l], open(DATA_DIR + "/train.pkl", "wb"), protocol=-1)
-    pickle.dump([test_c, test_r, test_l], open(DATA_DIR + "/test.pkl", "wb"), protocol=-1)
-    pickle.dump([dev_c, dev_r, dev_l], open(DATA_DIR + "/dev.pkl", "wb"), protocol=-1)
+    pickle.dump([train_c, train_r, train_l], open(DATA_DIR + "train.pkl", "wb"), protocol=-1)
+    pickle.dump([test_c, test_r, test_l], open(DATA_DIR + "test.pkl", "wb"), protocol=-1)
+    pickle.dump([dev_c, dev_r, dev_l], open(DATA_DIR + "dev.pkl", "wb"), protocol=-1)
 
-    pickle.dump([MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index], open(DATA_DIR + "/params.pkl", "wb"), protocol=-1)
-
-    #return train_c, train_r, train_l, test_c, test_r, test_l, dev_c, dev_r, dev_l
+    pickle.dump([MAX_SEQUENCE_LENGTH, MAX_NB_WORDS, word_index], open(DATA_DIR + "params.pkl", "wb"), protocol=-1)
     
 if __name__ == '__main__':
     main()
